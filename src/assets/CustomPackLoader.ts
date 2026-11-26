@@ -213,7 +213,7 @@ export async function tryLoadDevMiddlewarePack(
   builtinCanvas: HTMLCanvasElement,
   builtinManifest: AssetManifest,
 ): Promise<LoadedCustomPack | null> {
-  if (typeof fetch === 'undefined') return null;
+  if (!import.meta.env?.DEV || typeof fetch === 'undefined') return null;
   try {
     const res = await fetch('/custom-pack/manifest.json', { cache: 'no-store' });
     if (!res.ok) return null;
