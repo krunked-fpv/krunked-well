@@ -36,10 +36,21 @@ export class DebugDrawer {
       'pointer-events:auto',
     ].join(';');
 
+    const titleRow = document.createElement('div');
+    titleRow.style.cssText =
+      'display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;';
     const title = document.createElement('div');
     title.textContent = 'KRUNKED WELL — DEBUG (F9)';
-    title.style.cssText = 'font-weight:bold;color:#fa0000;margin-bottom:6px;letter-spacing:1px;';
-    this.el.appendChild(title);
+    title.style.cssText = 'font-weight:bold;color:#fa0000;letter-spacing:1px;';
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.textContent = 'X';
+    closeBtn.style.cssText =
+      'background:#222;color:#fafafa;border:1px solid #fa0000;padding:1px 6px;font:10px "Courier New",monospace;cursor:pointer;';
+    closeBtn.addEventListener('click', () => this.toggle(false));
+    titleRow.appendChild(title);
+    titleRow.appendChild(closeBtn);
+    this.el.appendChild(titleRow);
 
     this.infoEl = document.createElement('pre');
     this.infoEl.style.cssText = 'margin:0 0 8px 0;white-space:pre-wrap;font-size:10px;color:#d8d8d8;';
@@ -90,6 +101,8 @@ export class DebugDrawer {
     const actRow = makeRow('ACTIONS');
     makeBtn(actRow, 'HP 8/8', () => this.bridge.setHp(8, 8));
     makeBtn(actRow, '+1000 GEMS', () => this.bridge.setGems(this.bridge.getState().gems + 1000));
+    makeBtn(actRow, 'SPAWN BAT', () => this.bridge.spawnEnemy('bat', 0, 42));
+    makeBtn(actRow, 'SPAWN REDBALL', () => this.bridge.spawnEnemy('red_ball', 0, 42));
     makeBtn(actRow, 'UPGRADE UI', () => this.bridge.openUpgradeSelect());
     makeBtn(actRow, 'BOSS -900', () => this.bridge.damageBoss(900));
     makeBtn(actRow, 'KILL BOSS', () => this.bridge.damageBoss(4000));

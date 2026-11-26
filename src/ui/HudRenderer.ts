@@ -102,9 +102,11 @@ export function drawWellHud(
   // --------------------------------------------------------------------------
   const gemRightX = viewW - 11;
   const gemStr = String(state.gems);
+  const gemIconX = Math.max(76, gemRightX - gemStr.length * 6 - 7);
+  ctx.fillStyle = COL_D;
+  ctx.fillRect(gemIconX - 2, 2, gemRightX - gemIconX + 5, 10);
   drawBitmapTextOutlined(ctx, gemStr, gemRightX, 4, COL_L, COL_D, 1, 'right');
-  const gemIconX = gemRightX - gemStr.length * 6 - 7;
-  drawMiniGem(ctx, Math.max(76, gemIconX), 4);
+  drawMiniGem(ctx, gemIconX, 4);
 
   // Gem High streak bar (width 42px)
   const barW = 42;
@@ -168,8 +170,12 @@ export function drawWellHud(
     }
   }
 
-  // Weapon short badge & numeric charge bottom-right
+  // Weapon short badge & numeric charge bottom-right (crisp dark backdrop over walls)
   const weapon = getWeaponDef(p.weaponId);
+  const ammoLabel = `${p.ammo}/${p.ammoMax}`;
+  const badgeW = Math.max(weapon.shortName.length, ammoLabel.length) * 6 + 6;
+  ctx.fillStyle = COL_D;
+  ctx.fillRect(viewW - badgeW - 1, viewH - 20, badgeW, 19);
   drawBitmapTextOutlined(
     ctx,
     weapon.shortName,
@@ -182,7 +188,7 @@ export function drawWellHud(
   );
   drawBitmapTextOutlined(
     ctx,
-    `${p.ammo}/${p.ammoMax}`,
+    ammoLabel,
     viewW - 3,
     viewH - 9,
     p.ammo <= 0 ? COL_M : COL_L,

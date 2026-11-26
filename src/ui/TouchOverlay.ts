@@ -51,7 +51,7 @@ export class TouchOverlay {
 
     this.root = document.createElement('div');
     this.root.id = 'krunked-touch-overlay';
-    this.root.dataset.touchActive = 'false';
+    this.root.setAttribute('data-touch-active', 'false');
     Object.assign(this.root.style, {
       position: 'fixed',
       inset: '0',
@@ -342,7 +342,7 @@ export class TouchOverlay {
   setVisible(active: boolean): void {
     const show = Boolean(active) && this.settings.touchMode !== 'off';
     this.visible = show;
-    this.root.dataset.touchActive = show ? 'true' : 'false';
+    this.root.setAttribute('data-touch-active', show ? 'true' : 'false');
     this.root.style.visibility = show ? 'visible' : 'hidden';
     this.root.style.opacity = show ? '1' : '0';
 

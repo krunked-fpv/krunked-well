@@ -288,12 +288,14 @@ export class ViewportLayout {
     this.leftPanel.style.display = showSidePanels ? 'flex' : 'none';
     this.rightPanel.style.display = showSidePanels ? 'flex' : 'none';
 
-    // Clean thumb margins on left/right bezels in landscape/Tesla
+    // Clean thumb margins on left/right bezels in landscape/Tesla, and reserved bottom touch zone in portrait
     const bezelPadX = this.layoutMode === 'tesla' ? 42 : showSidePanels ? 18 : 6;
-    const bezelPadY = this.layoutMode === 'portrait' ? 6 : 16;
+    const bezelPadTop = this.layoutMode === 'portrait' ? 10 : 16;
+    const bezelPadBottom = this.layoutMode === 'portrait' ? 116 : 16;
     const panelGap = this.layoutMode === 'tesla' ? 28 : 16;
 
-    this.stageEl.style.padding = `${bezelPadY}px ${bezelPadX}px`;
+    this.stageEl.style.alignItems = this.layoutMode === 'portrait' ? 'flex-start' : 'center';
+    this.stageEl.style.padding = `${bezelPadTop}px ${bezelPadX}px ${bezelPadBottom}px ${bezelPadX}px`;
     this.stageEl.style.gap = `${panelGap}px`;
 
     const sidePanelW = showSidePanels ? Math.min(230, Math.max(168, Math.floor(vw * 0.2))) : 0;
@@ -306,7 +308,7 @@ export class ViewportLayout {
       160,
       vw - bezelPadX * 2 - (showSidePanels ? sidePanelW * 2 + panelGap * 2 : 0) - 8,
     );
-    const availH = Math.max(160, vh - bezelPadY * 2 - 8);
+    const availH = Math.max(160, vh - bezelPadTop - bezelPadBottom - 8);
 
     const rotated = this.settings.tateMode === 90 || this.settings.tateMode === 270;
     const logicalW = WELL_CONSTANTS.VIEW_W;

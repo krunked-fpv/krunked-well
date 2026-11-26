@@ -265,6 +265,10 @@ export class InputManager {
   }
 
   private handleKeyDown(e: KeyboardEvent): void {
+    // Ignore DevTools / Debug Drawer function keys so F9/F12 never alter input mode
+    if (/^F\d{1,2}$/.test(e.code)) {
+      return;
+    }
     const kb = this.settings.keybinds ?? DEFAULT_KEYBINDS;
     const isGameKey =
       this.matchesBinding(e.code, e.key, kb.left) ||
