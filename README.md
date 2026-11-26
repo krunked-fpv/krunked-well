@@ -1,5 +1,9 @@
 # Krunked Well
 
+[![Krunked Well CI & Deploy Pages](https://github.com/krunked-fpv/krunked-well/actions/workflows/ci.yml/badge.svg)](https://github.com/krunked-fpv/krunked-well/actions/workflows/ci.yml)
+
+**Play Live:** https://krunked-fpv.github.io/krunked-well/
+
 A standalone, deterministic 60 Hz TypeScript + WebGL2 vertical gunboot descent roguelite with crisp 4-channel semantic palette shaders, 30/60/120 FPS frame pacing, full Xbox / Tesla / Standard controller support, and touch-activated transparent mobile/Tesla controls.
 
 ## Features

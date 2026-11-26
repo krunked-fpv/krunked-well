@@ -1,23 +1,70 @@
-name: Krunked Well CI
+name: Krunked Well CI & Deploy Pages
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: ${{ github.ref == 'refs/heads/main' && 'pages' || format('ci-{0}', github.ref) }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  verify:
+  verify-and-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm run test
-      - run: npm run verify:assets
-      - run: npm run verify:sim
-      - run: npm run build
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit & integration tests
+        run: npm run test
+
+      - name: Gate B deterministic simulation soak
+        run: npm run verify:sim
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Gate A asset, oracle, controls & dist IP audit
+        run: npm run verify:assets
+
+      - name: Configure GitHub Pages
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        uses: actions/configure-pages@v6
+
+      - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    needs: verify-and-build
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
