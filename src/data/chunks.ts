@@ -248,6 +248,42 @@ export const CATACOMB_CHUNKS: readonly string[][] = [
     '###.B.###',
     '.........',
   ],
+  // 9. Bone vault with alternating trap balconies
+  [
+    '..E...E..',
+    '###.B.###',
+    '.T..B..T.',
+    '--..E..--',
+    '.#..B..#.',
+    '...---...',
+  ],
+  // 10. Catacomb belltower chute
+  [
+    '>...E...<',
+    '##..T..##',
+    '..--.--..',
+    '.E.#B#.E.',
+    '...#B#...',
+    '....v....',
+  ],
+  // 11. Twin ossuary niches with breakable bridge
+  [
+    '....E....',
+    '##.....##',
+    'B.E.T.E.B',
+    '##BBBBB##',
+    '....E....',
+    '.--...--.',
+  ],
+  // 12. Crypt spiral with hanging stalactites
+  [
+    '....v....',
+    '...###...',
+    'E..T.T..E',
+    '##--.--##',
+    '..E...E..',
+    '..B---B..',
+  ],
 ];
 
 export const AQUIFER_CHUNKS: readonly string[][] = [
@@ -323,6 +359,42 @@ export const AQUIFER_CHUNKS: readonly string[][] = [
     '##..O..##',
     '.........',
   ],
+  // 9. Sunken grotto with twin bubble chambers
+  [
+    '..E...E..',
+    '.##.O.##.',
+    'A.O...O.A',
+    '..--.--..',
+    '....E....',
+    '###OOO###',
+  ],
+  // 10. Tidal funnel with sheltered air bell
+  [
+    '##..E..##',
+    '.#..A..#.',
+    '..OOOOO..',
+    '.E.....E.',
+    '--..^..--',
+    '...###...',
+  ],
+  // 11. Reef staircase with staggered air pockets
+  [
+    'A..E.....',
+    'OOO###...',
+    '......E..',
+    '...---..A',
+    '..E...OOO',
+    '###......',
+  ],
+  // 12. Abyssal brine pool with central bubble column
+  [
+    '....E....',
+    '.--OOO--.',
+    'E...O...E',
+    '.#..A..#.',
+    '.#--O--#.',
+    '....E....',
+  ],
 ];
 
 export const LIMBO_CHUNKS: readonly string[][] = [
@@ -397,6 +469,42 @@ export const LIMBO_CHUNKS: readonly string[][] = [
     '##.....##',
     '...GGG...',
     '....E....',
+  ],
+  // 9. Phasing labyrinth pillars
+  [
+    '..E...E..',
+    '.G..#..G.',
+    '.G--#--G.',
+    '....E....',
+    '##.GGG.##',
+    '...---...',
+  ],
+  // 10. Void hourglass with breakable keystone
+  [
+    '##..E..##',
+    '.#.BBB.#.',
+    '..G---G..',
+    '.E..T..E.',
+    '..G...G..',
+    '.--...--.',
+  ],
+  // 11. Twin ghost sanctuaries
+  [
+    '....E....',
+    'GG..B..GG',
+    'E..---..E',
+    '.#..G..#.',
+    '..E.T.E..',
+    '...BBB...',
+  ],
+  // 12. Fractured limbo bridge
+  [
+    'E...G...E',
+    '##--G--##',
+    '....E....',
+    '.G.BBB.G.',
+    '..E...E..',
+    '---.T.---',
   ],
 ];
 
