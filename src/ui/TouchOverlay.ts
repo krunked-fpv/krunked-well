@@ -43,6 +43,7 @@ export class TouchOverlay {
   private pausePressed = false;
 
   private readonly unsubscribeTouch: () => void;
+  private readonly onResizeBound: () => void;
 
   constructor(container: HTMLElement, input: InputManager, settings: RenderSettings) {
     this.container = container;
@@ -169,11 +170,37 @@ export class TouchOverlay {
     this.container.appendChild(this.root);
 
     this.bindControls();
+    this.onResizeBound = () => this.updatePausePosition();
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+      window.addEventListener('resize', this.onResizeBound);
+    }
     this.updateSettings(settings, 0);
+    this.updatePausePosition();
 
     this.unsubscribeTouch = this.input.onTouchVisibilityChange((active) => {
       this.setVisible(active);
     });
+  }
+
+  private updatePausePosition(): void {
+    const vw = typeof window !== 'undefined' ? window.innerWidth || 1280 : 1280;
+    const vh = typeof window !== 'undefined' ? window.innerHeight || 720 : 720;
+    const isPortrait = vw / Math.max(1, vh) < 0.85;
+    if (isPortrait) {
+      // Portrait: dock Pause neatly between Left/Right pad and Jump/Fire button (zero HUD overlap!)
+      this.pauseBtn.style.top = 'auto';
+      this.pauseBtn.style.right = 'auto';
+      this.pauseBtn.style.left = '54%';
+      this.pauseBtn.style.bottom = 'max(30px, env(safe-area-inset-bottom, 30px))';
+      this.pauseBtn.style.transform = 'translateX(-50%)';
+    } else {
+      // Landscape / Tesla: dock Pause cleanly in far top-right bezel corner
+      this.pauseBtn.style.left = 'auto';
+      this.pauseBtn.style.bottom = 'auto';
+      this.pauseBtn.style.transform = 'none';
+      this.pauseBtn.style.right = 'max(14px, env(safe-area-inset-right, 14px))';
+      this.pauseBtn.style.top = 'max(12px, env(safe-area-inset-top, 12px))';
+    }
   }
 
   private bindControls(): void {
@@ -395,6 +422,9 @@ export class TouchOverlay {
   }
 
   destroy(): void {
+    if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
+      window.removeEventListener('resize', this.onResizeBound);
+    }
     this.unsubscribeTouch();
     this.setVisible(false);
     this.root.remove();
