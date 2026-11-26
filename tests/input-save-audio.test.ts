@@ -798,6 +798,18 @@ describe('InputManager — TASTE_NOTES & Universal Controls', () => {
     expect(input.getDebugSnapshot().touchActive).toBe(true);
     onTouch.mockClear();
 
+    // Non-standard Xbox 360 resting axes[5] = 0.0 must NOT trigger phantom RT action or hide touch
+    activeGamepads = [
+      createMockGamepad({
+        mapping: '',
+        axes: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      }),
+    ];
+    const restingNonStd = input.pollFrame();
+    expect(restingNonStd.action).toBe(false);
+    expect(input.getDebugSnapshot().touchActive).toBe(true);
+    expect(onTouch).not.toHaveBeenCalled();
+
     activeGamepads = [createMockGamepad({ axes: [0.15, 0.2, 0, 0] })];
     input.pollFrame();
     expect(input.getDebugSnapshot().touchActive).toBe(true);

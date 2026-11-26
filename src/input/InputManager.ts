@@ -87,6 +87,7 @@ export class InputManager {
   private lastSource: InputSource = 'keyboard';
   private gamepadConnected = false;
   private gamepadName: string | null = null;
+  private readonly gamepadAxisBaselines = new Map<number, number[]>();
   private lastFrame: InputFrame = {
     left: false,
     right: false,
@@ -130,7 +131,10 @@ export class InputManager {
       this.gamepadName = e.gamepad?.id || 'Gamepad';
       this.emitToast(`GAMEPAD CONNECTED: ${this.shortPadName(this.gamepadName)}`);
     };
-    this.onGamepadDisconnectedBound = () => {
+    this.onGamepadDisconnectedBound = (e) => {
+      if (e.gamepad) {
+        this.gamepadAxisBaselines.delete(e.gamepad.index);
+      }
       this.syncConnectedGamepadMetadata();
       if (!this.gamepadConnected) {
         this.emitToast('GAMEPAD DISCONNECTED');
@@ -390,6 +394,15 @@ export class InputManager {
       const btns = gp.buttons ?? [];
       const isStandard = gp.mapping === 'standard';
 
+      // Capture resting axis baseline when a gamepad is first seen so resting
+      // DirectInput/XInput axes (e.g. non-standard Xbox 360 axes[5] === 0.0 or -1.0)
+      // never emit phantom trigger/stick inputs!
+      let baseline = this.gamepadAxisBaselines.get(gp.index);
+      if (!baseline || baseline.length !== axes.length) {
+        baseline = Array.from(axes, (v) => (Number.isFinite(v) ? v : 0));
+        this.gamepadAxisBaselines.set(gp.index, baseline);
+      }
+
       const btnDown = (idx: number, threshold = 0.5): boolean => {
         const b = btns[idx];
         if (!b) return false;
@@ -398,20 +411,21 @@ export class InputManager {
 
       // Left Stick X (deadzone 0.22) + D-Pad 14/15 + non-standard D-pad hat axis fallback
       const lx = axes[0] ?? 0;
-      const hatX = !isStandard ? (axes[6] ?? 0) : 0;
+      const hatX = !isStandard && Math.abs((axes[6] ?? 0) - (baseline[6] ?? 0)) > 0.35 ? (axes[6] ?? 0) : 0;
       if (lx < -STICK_X_DEADZONE || btnDown(14) || hatX < -0.5) left = true;
       if (lx > STICK_X_DEADZONE || btnDown(15) || hatX > 0.5) right = true;
 
       // Left Stick Y (deadzone 0.35) + D-Pad 12/13 + non-standard D-pad hat axis fallback
       const ly = axes[1] ?? 0;
-      const hatY = !isStandard ? (axes[7] ?? 0) : 0;
+      const hatY = !isStandard && Math.abs((axes[7] ?? 0) - (baseline[7] ?? 0)) > 0.35 ? (axes[7] ?? 0) : 0;
       if (ly < -STICK_Y_DEADZONE || btnDown(12) || hatY < -0.5) up = true;
       if (ly > STICK_Y_DEADZONE || btnDown(13) || hatY > 0.5) down = true;
 
-      // Non-standard single-axis POV hat fallback (common on some USB controllers at axes[9])
+      // Non-standard single-axis POV hat fallback (only when moved away from resting baseline!)
       if (!isStandard && axes.length > 9) {
         const pov = axes[9];
-        if (pov !== undefined && Math.abs(pov) <= 1.05) {
+        const basePov = baseline[9] ?? 0;
+        if (pov !== undefined && Math.abs(pov - basePov) > 0.15 && Math.abs(pov) <= 1.05) {
           if (pov <= -0.9 && pov >= -1.05) up = true;
           else if (pov >= -0.5 && pov <= -0.3) right = true;
           else if (pov >= 0.05 && pov <= 0.25) down = true;
@@ -419,15 +433,26 @@ export class InputManager {
         }
       }
 
-      // Action = A(0) | B(1) | X(2) | RB(5) | RT(7 > 0.35) (+ non-standard RT axis[5])
-      const rtAxis = !isStandard && axes[5] !== undefined ? (axes[5] + 1) * 0.5 : 0;
+      // Action = A(0) | B(1) | X(2) | RB(5) | RT(7 > 0.35)
+      // Non-standard RT axis[5] ONLY fires if axis rests near -1 (trigger range -1..+1)
+      // OR moves significantly positive from a 0-resting baseline (never when resting at 0.0!).
+      let rtAxisPressed = false;
+      if (!isStandard && axes[5] !== undefined) {
+        const raw5 = axes[5];
+        const base5 = baseline[5] ?? 0;
+        if (base5 < -0.7) {
+          rtAxisPressed = (raw5 + 1) * 0.5 > TRIGGER_THRESHOLD;
+        } else {
+          rtAxisPressed = raw5 - base5 > 0.45 && raw5 > TRIGGER_THRESHOLD;
+        }
+      }
       if (
         btnDown(0) ||
         btnDown(1) ||
         btnDown(2) ||
         btnDown(5) ||
         btnDown(7, TRIGGER_THRESHOLD) ||
-        rtAxis > TRIGGER_THRESHOLD
+        rtAxisPressed
       ) {
         action = true;
       }
