@@ -8,7 +8,7 @@ import type { InputManager } from '../input/InputManager.ts';
 //   pointer-events:none).
 // - Zero center-screen blocking; only active control clusters receive pointers.
 // - Seamless slide-across Left/Right thumb pad + independent multi-touch Action
-//   button + subtle top-right Pause button.
+//   button + subtle docked Pause button with ornate beveled glass styling.
 // ============================================================================
 
 const SIZE_METRICS: Record<
@@ -75,9 +75,9 @@ export class TouchOverlay {
       bottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
       display: 'flex',
       alignItems: 'stretch',
-      borderRadius: '10px',
-      border: '2px solid #fafafa',
-      background: 'rgba(5, 5, 5, 0.55)',
+      borderRadius: '0px',
+      border: '2px solid #ffffff',
+      background: '#000000',
       overflow: 'hidden',
       pointerEvents: 'none',
       touchAction: 'none',
@@ -85,48 +85,48 @@ export class TouchOverlay {
     });
 
     this.leftHalf = document.createElement('div');
-    this.leftHalf.textContent = '◀';
+    this.leftHalf.textContent = '◄';
     Object.assign(this.leftHalf.style, {
       flex: '1',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontWeight: '700',
-      borderRight: '1px solid rgba(255,255,255,0.28)',
+      fontWeight: '800',
+      borderRight: '2px solid currentColor',
       pointerEvents: 'none',
     });
 
     this.rightHalf = document.createElement('div');
-    this.rightHalf.textContent = '▶';
+    this.rightHalf.textContent = '►';
     Object.assign(this.rightHalf.style, {
       flex: '1',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontWeight: '700',
+      fontWeight: '800',
       pointerEvents: 'none',
     });
 
     this.movePad.appendChild(this.leftHalf);
     this.movePad.appendChild(this.rightHalf);
 
-    // Bottom-Right: Large Independent JUMP / SHOOT Button
+    // Bottom-Right: Large Independent JUMP / FIRE Arcade Button
     this.actionBtn = document.createElement('button');
     this.actionBtn.type = 'button';
     this.actionBtn.dataset.control = 'action-btn';
     this.actionBtn.setAttribute('aria-label', 'Jump and Shoot');
-    this.actionBtn.innerHTML = '<span style="display:block;line-height:1.1">JUMP<br/>FIRE</span>';
+    this.actionBtn.innerHTML = '<span style="display:block;line-height:1.15">JUMP<br/>FIRE</span>';
     Object.assign(this.actionBtn.style, {
       position: 'absolute',
       right: 'max(14px, env(safe-area-inset-right, 14px))',
       bottom: 'max(14px, env(safe-area-inset-bottom, 14px))',
-      borderRadius: '50%',
-      border: '2px solid #fafafa',
-      background: 'rgba(5, 5, 5, 0.55)',
-      color: '#fafafa',
-      fontFamily: "'Courier New', Courier, monospace",
-      fontWeight: '700',
-      letterSpacing: '0.04em',
+      borderRadius: '0px',
+      border: '2px solid #ffffff',
+      background: '#000000',
+      color: '#ffffff',
+      fontFamily: 'var(--kw-font-pixel)',
+      fontWeight: '800',
+      letterSpacing: '0.06em',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -138,7 +138,7 @@ export class TouchOverlay {
       outline: 'none',
     });
 
-    // Top-Right: Subtle Transparent PAUSE Button
+    // Docked Transparent PAUSE Button
     this.pauseBtn = document.createElement('button');
     this.pauseBtn.type = 'button';
     this.pauseBtn.dataset.control = 'pause-btn';
@@ -148,12 +148,12 @@ export class TouchOverlay {
       position: 'absolute',
       right: 'max(14px, env(safe-area-inset-right, 14px))',
       top: 'max(12px, env(safe-area-inset-top, 12px))',
-      borderRadius: '8px',
-      border: '2px solid #fafafa',
-      background: 'rgba(5, 5, 5, 0.55)',
-      color: '#fafafa',
-      fontFamily: "'Courier New', Courier, monospace",
-      fontWeight: '700',
+      borderRadius: '0px',
+      border: '2px solid #ffffff',
+      background: '#000000',
+      color: '#ffffff',
+      fontFamily: 'var(--kw-font-pixel)',
+      fontWeight: '800',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -187,14 +187,12 @@ export class TouchOverlay {
     const vh = typeof window !== 'undefined' ? window.innerHeight || 720 : 720;
     const isPortrait = vw / Math.max(1, vh) < 0.85;
     if (isPortrait) {
-      // Portrait: dock Pause neatly between Left/Right pad and Jump/Fire button (zero HUD overlap!)
       this.pauseBtn.style.top = 'auto';
       this.pauseBtn.style.right = 'auto';
       this.pauseBtn.style.left = '54%';
       this.pauseBtn.style.bottom = 'max(30px, env(safe-area-inset-bottom, 30px))';
       this.pauseBtn.style.transform = 'translateX(-50%)';
     } else {
-      // Landscape / Tesla: dock Pause cleanly in far top-right bezel corner
       this.pauseBtn.style.left = 'auto';
       this.pauseBtn.style.bottom = 'auto';
       this.pauseBtn.style.transform = 'none';
@@ -257,7 +255,6 @@ export class TouchOverlay {
       }
     });
 
-    // Action Button (independent pointerId for full multi-touch)
     const releaseAction = (): void => {
       this.actionPointerId = null;
       this.actionPressed = false;
@@ -296,7 +293,6 @@ export class TouchOverlay {
       }
     });
 
-    // Pause Button
     const releasePause = (): void => {
       this.pausePointerId = null;
       this.pausePressed = false;
@@ -373,8 +369,6 @@ export class TouchOverlay {
     this.root.style.visibility = show ? 'visible' : 'hidden';
     this.root.style.opacity = show ? '1' : '0';
 
-    // Root stays pointer-events: none so center screen NEVER blocks taps;
-    // ONLY the 3 control clusters accept pointers when visible!
     const clusterPtr = show ? 'auto' : 'none';
     this.movePad.style.pointerEvents = clusterPtr;
     this.actionBtn.style.pointerEvents = clusterPtr;

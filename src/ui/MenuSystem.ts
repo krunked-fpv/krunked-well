@@ -16,12 +16,18 @@ import { getPalette, PALETTES, rgbToHex } from '../data/palettes.ts';
 import { STYLES } from '../data/styles.ts';
 import { TROPHIES, UNLOCK_MILESTONES } from '../data/trophies.ts';
 import { getUpgradeDef } from '../data/upgrades.ts';
+import {
+  getPaletteHex,
+  renderPixelGemSvg,
+  renderPixelLogoSvg,
+  renderPixelUpgradeIconSvg,
+} from './PixelUiIcons.ts';
 
 // ============================================================================
-// Krunked Well — Full Palette-Themed Menu & Overlay System
-// Accessible via Keyboard, Gamepad, Mouse Click, AND Direct Touch Tap!
-// Screens: Title, Style Select, Palette Select (live 38-palette preview),
-// Trophies & Stats (all 23), Options, Pause, Upgrade Select, Game Over, Victory
+// Krunked Well — Authentic 4-Color Palette-Synced Retro Arcade Menu System
+// Supports Keyboard, Gamepad, Mouse Click, AND Direct Touch Tap.
+// Screens: Title, Style Select, Palette Gallery (live 38-palette preview),
+// Trophies & Stats (all 23), Options, Pause, Upgrade Select, End Screens.
 // ============================================================================
 
 export type MenuScreen =
@@ -95,7 +101,6 @@ export class MenuSystem {
   private cursor = 0;
   private packStatus: PackStatus = { customPackAvailable: false, activePack: 'builtin' };
 
-  // Input repeat timers for smooth keyboard/gamepad navigation
   private navHoldDirY: -1 | 0 | 1 = 0;
   private navHoldDirX: -1 | 0 | 1 = 0;
   private navRepeatTimerY = 0;
@@ -117,25 +122,25 @@ export class MenuSystem {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '16px',
-      background: 'rgba(5, 5, 5, 0.78)',
-      fontFamily: "'Courier New', Courier, monospace",
+      padding: '14px',
+      background: 'rgba(0, 0, 0, 0.72)',
+      fontFamily: 'var(--kw-font-pixel)',
       boxSizing: 'border-box',
     });
 
     this.panel = document.createElement('div');
     this.panel.id = 'krunked-menu-panel';
     Object.assign(this.panel.style, {
-      width: 'min(430px, 94vw)',
+      position: 'relative',
+      width: 'min(420px, 94vw)',
       maxHeight: '90vh',
       overflowY: 'auto',
-      border: '2px solid #fafafa',
-      borderRadius: '6px',
+      border: '3px solid #ffffff',
+      borderRadius: '0px',
       padding: '18px 18px 16px',
-      background: '#050505',
-      color: '#fafafa',
+      background: '#000000',
+      color: '#ffffff',
       boxSizing: 'border-box',
-      boxShadow: '0 10px 36px rgba(0, 0, 0, 0.85)',
     });
 
     this.root.appendChild(this.panel);
@@ -162,7 +167,6 @@ export class MenuSystem {
       this.packStatus = packStatus;
     }
 
-    // Track state.mode transitions cleanly
     if (state.mode !== this.lastMode) {
       this.lastMode = state.mode;
       switch (state.mode) {
@@ -271,7 +275,6 @@ export class MenuSystem {
       }
     }
 
-    // Check cancel BEFORE action so Gamepad B cleanly goes back in menus
     if (input.cancelPressed) {
       this.handleCancel();
       return true;
@@ -358,13 +361,9 @@ export class MenuSystem {
   }
 
   private previewPaletteAtCursor(save: SaveData): void {
+    void save;
     const idx = Math.max(0, Math.min(PALETTES.length - 1, this.cursor));
-    if (save.unlockedPalettes.includes(idx) || idx === 0) {
-      this.callbacks.onSelectPalette(idx);
-    } else {
-      // Live preview still applies palette visually while browsing!
-      this.callbacks.onSelectPalette(idx);
-    }
+    this.callbacks.onSelectPalette(idx);
   }
 
   private toggleHardMode(save: SaveData): void {
@@ -548,36 +547,33 @@ export class MenuSystem {
   }
 
   private renderScreen(state: SimState, save: SaveData): void {
-    const pal = getPalette(save.selectedPalette);
-    const light = rgbToHex(pal.light);
-    const mid = rgbToHex(pal.mid);
-    const dark = rgbToHex(pal.dark);
-    const special = rgbToHex(pal.special);
+    const pal = getPaletteHex(save.selectedPalette);
 
-    this.panel.style.background = dark;
-    this.panel.style.color = light;
-    this.panel.style.borderColor = light;
+    this.panel.style.background = pal.dark;
+    this.panel.style.color = pal.light;
+    this.panel.style.borderColor = pal.light;
+    this.panel.style.boxShadow = `0 0 0 3px ${pal.dark}, 0 0 0 6px ${pal.mid}`;
 
-    const btnStyle = (selected: boolean, disabled = false): string =>
+    const btnStyle = (selected: boolean, disabled = false, primary = false): string =>
       [
         'width:100%',
-        'min-height:36px',
-        'padding:8px 12px',
+        primary ? 'min-height:40px' : 'min-height:34px',
+        'padding:7px 12px',
         'margin-bottom:6px',
         'display:flex',
         'align-items:center',
         'justify-content:space-between',
         'text-align:left',
-        'font-family:inherit',
-        'font-size:13px',
-        'font-weight:700',
-        'letter-spacing:0.05em',
-        'border-radius:4px',
+        'font-family:var(--kw-font-pixel)',
+        primary ? 'font-size:14px' : 'font-size:12px',
+        'font-weight:800',
+        'letter-spacing:0.08em',
+        'border-radius:0px',
         'cursor:' + (disabled ? 'not-allowed' : 'pointer'),
-        'opacity:' + (disabled ? '0.48' : '1'),
-        'border:2px solid ' + (selected ? mid : light),
-        'background:' + (selected ? mid : 'transparent'),
-        'color:' + (selected ? dark : light),
+        'opacity:' + (disabled ? '0.45' : '1'),
+        'border:2px solid ' + (selected ? pal.mid : pal.light),
+        'background:' + (selected ? pal.mid : pal.dark),
+        'color:' + (selected ? pal.dark : pal.light),
       ].join(';');
 
     let html = '';
@@ -590,23 +586,51 @@ export class MenuSystem {
           ? 'ON'
           : 'OFF'
         : 'LOCKED';
-      const packLabel = this.packStatus.activePack === 'custom' ? 'CUSTOM' : 'BUILT-IN';
+      const packLabel = this.packStatus.activePack === 'custom' ? 'CUSTOM PACK' : 'BUILT-IN';
 
       html = `
-        <div style="text-align:center;margin-bottom:14px;border-bottom:2px solid ${light};padding-bottom:10px;">
-          <div style="font-size:24px;font-weight:900;letter-spacing:0.12em;color:${light};">KRUNKED WELL</div>
-          <div style="font-size:11px;letter-spacing:0.14em;color:${mid};margin-top:3px;">VERTICAL GUNBOOT DESCENT</div>
+        <div style="text-align:center;margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid ${pal.light};">
+          ${renderPixelLogoSvg(pal, 260)}
+          <div style="font-size:10px;font-weight:800;letter-spacing:0.22em;color:${pal.light};margin-top:8px;opacity:0.85;">60HZ GUNBOOT DESCENT</div>
         </div>
-        <button type="button" data-idx="0" style="${btnStyle(this.cursor === 0)}"><span>▶ PLAY</span><span>DESCEND</span></button>
-        <button type="button" data-idx="1" style="${btnStyle(this.cursor === 1)}"><span>STYLE SELECT</span><span>${escapeHtml(styleDef.name)}</span></button>
-        <button type="button" data-idx="2" style="${btnStyle(this.cursor === 2)}"><span>PALETTE</span><span>#${palDef.id} ${escapeHtml(palDef.name)}</span></button>
-        <button type="button" data-idx="3" style="${btnStyle(this.cursor === 3)}"><span>TROPHIES &amp; STATS</span><span>${save.unlockedTrophies.length}/${TROPHIES.length}</span></button>
-        <button type="button" data-idx="4" style="${btnStyle(this.cursor === 4)}"><span>OPTIONS</span><span>VIDEO / INPUT</span></button>
-        <button type="button" data-idx="5" style="${btnStyle(this.cursor === 5, !save.hardModeUnlocked)}"><span>HARD MODE</span><span>${hardLabel}</span></button>
-        <button type="button" data-idx="6" style="${btnStyle(this.cursor === 6)}"><span>ART PACK</span><span>${packLabel}</span></button>
-        <button type="button" data-idx="7" style="${btnStyle(this.cursor === 7)}"><span>LOAD CUSTOM PACK</span><span>FOLDER</span></button>
-        <div style="margin-top:8px;font-size:10px;opacity:0.7;text-align:center;">
-          TOTAL GEMS: ◆ ${save.totalGems} &nbsp;|&nbsp; BEST DEPTH: ${save.bestDepth}M
+
+        <button class="kw-px-btn" type="button" data-idx="0" style="${btnStyle(this.cursor === 0, false, true)}">
+          <span>${this.cursor === 0 ? '►' : ' '} START GAME</span>
+          <span style="font-size:11px;">PLAY</span>
+        </button>
+        <button class="kw-px-btn" type="button" data-idx="1" style="${btnStyle(this.cursor === 1)}">
+          <span>${this.cursor === 1 ? '►' : ' '} STYLE</span>
+          <span style="font-size:11px;">${escapeHtml(styleDef.name)}</span>
+        </button>
+        <button class="kw-px-btn" type="button" data-idx="2" style="${btnStyle(this.cursor === 2)}">
+          <span>${this.cursor === 2 ? '►' : ' '} PALETTE</span>
+          <span style="font-size:11px;">#${palDef.id} ${escapeHtml(palDef.name)}</span>
+        </button>
+        <button class="kw-px-btn" type="button" data-idx="3" style="${btnStyle(this.cursor === 3)}">
+          <span>${this.cursor === 3 ? '►' : ' '} TROPHIES</span>
+          <span style="font-size:11px;">${save.unlockedTrophies.length}/${TROPHIES.length}</span>
+        </button>
+        <button class="kw-px-btn" type="button" data-idx="4" style="${btnStyle(this.cursor === 4)}">
+          <span>${this.cursor === 4 ? '►' : ' '} OPTIONS</span>
+          <span style="font-size:11px;">SETTINGS</span>
+        </button>
+        <button class="kw-px-btn" type="button" data-idx="5" style="${btnStyle(this.cursor === 5, !save.hardModeUnlocked)}">
+          <span>${this.cursor === 5 ? '►' : ' '} HARD MODE</span>
+          <span style="font-size:11px;">${hardLabel}</span>
+        </button>
+        <button class="kw-px-btn" type="button" data-idx="6" style="${btnStyle(this.cursor === 6)}">
+          <span>${this.cursor === 6 ? '►' : ' '} ART PACK</span>
+          <span style="font-size:11px;">${packLabel}</span>
+        </button>
+        <button class="kw-px-btn" type="button" data-idx="7" style="${btnStyle(this.cursor === 7)}">
+          <span>${this.cursor === 7 ? '►' : ' '} LOAD CUSTOM PACK</span>
+          <span style="font-size:11px;">FOLDER</span>
+        </button>
+
+        <div style="margin-top:10px;padding-top:10px;border-top:2px solid ${pal.light};display:flex;justify-content:space-around;font-size:11px;font-weight:800;">
+          <span style="display:flex;align-items:center;gap:4px;">${renderPixelGemSvg(pal, 12)} ${save.totalGems}</span>
+          <span>BEST ${save.bestDepth}M</span>
+          <span>WINS ${save.victories}</span>
         </div>
       `;
     } else if (this.screen === 'style_select') {
@@ -614,21 +638,21 @@ export class MenuSystem {
         const unlocked = save.unlockedStyles.includes(st.id) || st.id === 0;
         const active = save.selectedStyle === st.id;
         const req = findUnlockGems('style', st.id);
-        const badge = active ? 'ACTIVE' : unlocked ? 'UNLOCKED' : `LOCKED (${req ?? 0}G)`;
+        const badge = active ? '[ACTIVE]' : unlocked ? 'OPEN' : `${req ?? 0}G`;
         return `
-          <button type="button" data-idx="${idx}" style="${btnStyle(this.cursor === idx, !unlocked)};flex-direction:column;align-items:flex-start;gap:4px;">
+          <button class="kw-px-btn" type="button" data-idx="${idx}" style="${btnStyle(this.cursor === idx, !unlocked)};flex-direction:column;align-items:flex-start;gap:4px;">
             <div style="width:100%;display:flex;justify-content:space-between;">
-              <span>${escapeHtml(st.name)}</span>
-              <span style="font-size:11px;">${badge}</span>
+              <span>${this.cursor === idx ? '► ' : ''}${escapeHtml(st.name)}</span>
+              <span style="font-size:10px;">${badge}</span>
             </div>
-            <div style="font-size:11px;font-weight:400;opacity:0.9;">${escapeHtml(st.description)}</div>
+            <div style="font-size:10px;font-weight:600;opacity:0.9;">${escapeHtml(st.description)}</div>
           </button>
         `;
       }).join('');
       html = `
-        <div style="font-size:16px;font-weight:700;margin-bottom:10px;border-bottom:2px solid ${light};padding-bottom:6px;">STYLE SELECT</div>
+        <div style="text-align:center;font-size:15px;font-weight:900;letter-spacing:0.14em;padding-bottom:10px;margin-bottom:10px;border-bottom:2px solid ${pal.light};">SELECT STYLE</div>
         ${items}
-        <button type="button" data-idx="${STYLES.length}" style="${btnStyle(this.cursor === STYLES.length)}"><span>◀ BACK</span><span></span></button>
+        <button class="kw-px-btn" type="button" data-idx="${STYLES.length}" style="${btnStyle(this.cursor === STYLES.length)}"><span>◄ BACK</span><span>ESC</span></button>
       `;
     } else if (this.screen === 'palette_select') {
       const curPal = getPalette(this.cursor);
@@ -639,14 +663,15 @@ export class MenuSystem {
         const isUnl = save.unlockedPalettes.includes(p.id) || p.id === 0;
         return `
           <button type="button" data-pal="${idx}" style="
-            padding:6px 4px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:10px;font-weight:700;
-            border:2px solid ${isSel ? mid : light};
+            padding:6px 4px;border-radius:0px;cursor:pointer;font-family:var(--kw-font-pixel);font-size:10px;font-weight:800;
+            border:2px solid ${isSel ? pal.light : rgbToHex(p.mid)};
             background:${rgbToHex(p.dark)};color:${rgbToHex(p.light)};
-            opacity:${isUnl ? '1' : '0.62'};display:flex;flex-direction:column;align-items:center;gap:4px;">
+            outline:${isSel ? `2px solid ${pal.mid}` : 'none'};
+            opacity:${isUnl ? '1' : '0.72'};display:flex;flex-direction:column;align-items:center;gap:4px;">
             <div style="display:flex;gap:2px;">
-              <span style="width:9px;height:9px;background:${rgbToHex(p.light)};border:1px solid #888;"></span>
-              <span style="width:9px;height:9px;background:${rgbToHex(p.mid)};border:1px solid #888;"></span>
-              <span style="width:9px;height:9px;background:${rgbToHex(p.special)};border:1px solid #888;"></span>
+              <span style="width:10px;height:10px;background:${rgbToHex(p.light)};border:1px solid ${rgbToHex(p.dark)};"></span>
+              <span style="width:10px;height:10px;background:${rgbToHex(p.mid)};border:1px solid ${rgbToHex(p.dark)};"></span>
+              <span style="width:10px;height:10px;background:${rgbToHex(p.special)};border:1px solid ${rgbToHex(p.dark)};"></span>
             </div>
             <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;">${p.id} ${escapeHtml(p.name)}</span>
           </button>
@@ -654,14 +679,14 @@ export class MenuSystem {
       }).join('');
 
       html = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:2px solid ${light};padding-bottom:6px;">
-          <span style="font-size:15px;font-weight:700;">PALETTES (${PALETTES.length})</span>
-          <span style="font-size:11px;color:${mid};">#${curPal.id} ${escapeHtml(curPal.name)} ${unlocked ? '' : `(${req ?? 0}G)`}</span>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;margin-bottom:10px;border-bottom:2px solid ${pal.light};">
+          <span style="font-size:14px;font-weight:900;letter-spacing:0.1em;">PALETTES (${PALETTES.length})</span>
+          <span style="font-size:11px;font-weight:800;color:${pal.mid};">#${curPal.id} ${escapeHtml(curPal.name)} ${unlocked ? '' : `(${req ?? 0}G)`}</span>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;max-height:54vh;overflow-y:auto;padding-right:4px;margin-bottom:10px;">
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;max-height:52vh;overflow-y:auto;padding:2px;margin-bottom:12px;">
           ${grid}
         </div>
-        <button type="button" data-action="back" style="${btnStyle(true)}"><span>CONFIRM &amp; BACK</span><span>ESC / B</span></button>
+        <button class="kw-px-btn" type="button" data-action="back" style="${btnStyle(true)}"><span>► USE PALETTE</span><span>ESC</span></button>
       `;
     } else if (this.screen === 'trophies') {
       const fastest =
@@ -669,72 +694,68 @@ export class MenuSystem {
       const rows = TROPHIES.map((t) => {
         const earned = save.unlockedTrophies.includes(t.id);
         return `
-          <div style="padding:6px 8px;margin-bottom:5px;border:1px solid ${earned ? mid : light};border-radius:4px;opacity:${earned ? '1' : '0.52'};">
-            <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;">
-              <span>${earned ? '★' : '☆'} ${escapeHtml(t.name)}</span>
-              <span style="color:${earned ? mid : light};">${earned ? 'EARNED' : 'LOCKED'}</span>
+          <div style="padding:7px 9px;margin-bottom:6px;border:2px solid ${earned ? pal.mid : pal.light};opacity:${earned ? '1' : '0.6'};">
+            <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:800;">
+              <span style="color:${earned ? pal.mid : pal.light};">${earned ? '★' : '☆'} ${escapeHtml(t.name)}</span>
+              <span style="font-size:10px;">${earned ? 'OK' : 'LOCK'}</span>
             </div>
-            <div style="font-size:10px;margin-top:2px;opacity:0.86;">${escapeHtml(t.description)}</div>
+            <div style="font-size:10px;margin-top:3px;opacity:0.86;">${escapeHtml(t.description)}</div>
           </div>
         `;
       }).join('');
 
       html = `
-        <div style="font-size:16px;font-weight:700;margin-bottom:8px;border-bottom:2px solid ${light};padding-bottom:6px;">
-          TROPHIES &amp; STATS (${save.unlockedTrophies.length}/${TROPHIES.length})
+        <div style="text-align:center;font-size:14px;font-weight:900;letter-spacing:0.1em;padding-bottom:8px;margin-bottom:10px;border-bottom:2px solid ${pal.light};">TROPHIES (${save.unlockedTrophies.length}/${TROPHIES.length})</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;font-weight:800;margin-bottom:10px;padding:8px;border:2px solid ${pal.light};">
+          <div>BEST: ${save.bestDepth}M</div>
+          <div>SCORE: ${save.highScore}</div>
+          <div>GEMS: ${save.totalGems}</div>
+          <div>RUNS: ${save.runsPlayed}</div>
+          <div>WINS: ${save.victories}</div>
+          <div>FAST: ${fastest}</div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;margin-bottom:10px;padding:8px;border:1px solid ${light};border-radius:4px;">
-          <div>BEST DEPTH: <b>${save.bestDepth}M</b></div>
-          <div>HIGH SCORE: <b>${save.highScore}</b></div>
-          <div>TOTAL GEMS: <b>◆ ${save.totalGems}</b></div>
-          <div>RUNS PLAYED: <b>${save.runsPlayed}</b></div>
-          <div>VICTORIES: <b>${save.victories}</b></div>
-          <div>FASTEST WIN: <b>${fastest}</b></div>
-        </div>
-        <div style="max-height:46vh;overflow-y:auto;padding-right:4px;margin-bottom:10px;">
+        <div style="max-height:44vh;overflow-y:auto;padding-right:4px;margin-bottom:10px;">
           ${rows}
         </div>
-        <button type="button" data-idx="0" style="${btnStyle(true)}"><span>◀ BACK</span><span>ESC / B</span></button>
+        <button class="kw-px-btn" type="button" data-idx="0" style="${btnStyle(true)}"><span>◄ BACK</span><span>ESC</span></button>
       `;
     } else if (this.screen === 'options') {
       const s = save.settings;
       const rows: ReadonlyArray<[string, string]> = [
         ['FPS CAP', `${s.fpsCap}`],
-        ['60HZ PIXEL SNAP', s.pixelSnap60 ? 'ON' : 'OFF'],
-        ['DISPLAY SCALE', s.displayScale.toUpperCase()],
+        ['60HZ SNAP', s.pixelSnap60 ? 'ON' : 'OFF'],
+        ['SCALE', s.displayScale.toUpperCase()],
         ['TATE MODE', `${s.tateMode}°`],
         ['SFX VOL', `${Math.round(s.sfxVolume * 100)}%`],
         ['BGM VOL', `${Math.round(s.bgmVolume * 100)}%`],
-        ['SCREENSHAKE', s.screenshake ? 'ON' : 'OFF'],
+        ['SHAKE', s.screenshake ? 'ON' : 'OFF'],
         ['RUMBLE', s.rumble ? 'ON' : 'OFF'],
         ['TOUCH MODE', s.touchMode.toUpperCase()],
-        ['TOUCH OPACITY', `${Math.round(s.touchOpacity * 100)}%`],
+        ['TOUCH ALPHA', `${Math.round(s.touchOpacity * 100)}%`],
         ['TOUCH SIZE', s.touchSize.toUpperCase()],
-        ['◀ BACK', ''],
+        ['◄ BACK', ''],
       ];
       const listHtml = rows
         .map(
           ([label, val], idx) => `
-          <button type="button" data-idx="${idx}" style="${btnStyle(this.cursor === idx)}">
-            <span>${label}</span>
-            <span>${val ? `◀ ${val} ▶` : ''}</span>
+          <button class="kw-px-btn" type="button" data-idx="${idx}" style="${btnStyle(this.cursor === idx)}">
+            <span>${this.cursor === idx ? '► ' : ''}${label}</span>
+            <span>${val ? `◄ ${val} ►` : ''}</span>
           </button>`,
         )
         .join('');
       html = `
-        <div style="font-size:16px;font-weight:700;margin-bottom:10px;border-bottom:2px solid ${light};padding-bottom:6px;">OPTIONS</div>
+        <div style="text-align:center;font-size:15px;font-weight:900;letter-spacing:0.14em;padding-bottom:8px;margin-bottom:10px;border-bottom:2px solid ${pal.light};">OPTIONS</div>
         ${listHtml}
       `;
     } else if (this.screen === 'pause') {
-      const pauseItems = ['RESUME', 'RETRY', 'OPTIONS', 'TITLE'];
+      const pauseItems = ['RESUME', 'RETRY', 'OPTIONS', 'QUIT TO TITLE'];
       html = `
-        <div style="text-align:center;font-size:18px;font-weight:900;letter-spacing:0.12em;margin-bottom:12px;border-bottom:2px solid ${light};padding-bottom:8px;">
-          PAUSED
-        </div>
+        <div style="text-align:center;font-size:18px;font-weight:900;letter-spacing:0.18em;padding-bottom:10px;margin-bottom:12px;border-bottom:2px solid ${pal.light};">PAUSED</div>
         ${pauseItems
           .map(
             (label, idx) =>
-              `<button type="button" data-idx="${idx}" style="${btnStyle(this.cursor === idx)}"><span>${label}</span><span>${this.cursor === idx ? '◀' : ''}</span></button>`,
+              `<button class="kw-px-btn" type="button" data-idx="${idx}" style="${btnStyle(this.cursor === idx, false, idx === 0)}"><span>${this.cursor === idx ? '► ' : ''}${label}</span><span></span></button>`,
           )
           .join('')}
       `;
@@ -744,49 +765,59 @@ export class MenuSystem {
           const ug = getUpgradeDef(uid);
           const sel = this.cursor === idx;
           return `
-            <button type="button" data-upgrade="${idx}" style="${btnStyle(sel)};flex-direction:column;align-items:flex-start;gap:4px;padding:10px 12px;">
-              <div style="width:100%;display:flex;justify-content:space-between;align-items:center;">
-                <span style="font-size:14px;">${sel ? '▶ ' : ''}${escapeHtml(ug.name)}</span>
-                <span style="font-size:10px;border:1px solid currentColor;padding:1px 5px;border-radius:3px;">PICK</span>
+            <button class="kw-px-card" type="button" data-upgrade="${idx}" style="
+              width:100%;padding:10px 12px;margin-bottom:8px;
+              display:flex;align-items:center;gap:12px;text-align:left;cursor:pointer;
+              border-radius:0px;font-family:var(--kw-font-pixel);
+              border:2px solid ${sel ? pal.mid : pal.light};
+              background:${sel ? pal.mid : pal.dark};
+              color:${sel ? pal.dark : pal.light};
+            ">
+              ${renderPixelUpgradeIconSvg(ug.id, pal, 48)}
+              <div style="flex:1;min-width:0;">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+                  <span style="font-size:13px;font-weight:900;letter-spacing:0.06em;">${sel ? '► ' : ''}${escapeHtml(ug.name)}</span>
+                  <span style="font-size:10px;font-weight:800;padding:1px 6px;border:1px solid ${sel ? pal.dark : pal.light};">${sel ? 'PICK' : 'ITEM'}</span>
+                </div>
+                <div style="font-size:11px;font-weight:700;margin-top:4px;line-height:1.35;opacity:0.95;">${escapeHtml(ug.description)}</div>
               </div>
-              <div style="font-size:11px;font-weight:400;opacity:0.92;">${escapeHtml(ug.description)}</div>
             </button>
           `;
         })
         .join('');
 
       html = `
-        <div style="text-align:center;margin-bottom:12px;border-bottom:2px solid ${light};padding-bottom:8px;">
-          <div style="font-size:16px;font-weight:900;letter-spacing:0.08em;color:${special};">STAGE CLEAR!</div>
-          <div style="font-size:12px;margin-top:3px;">CHOOSE AN UPGRADE</div>
+        <div style="text-align:center;padding-bottom:10px;margin-bottom:12px;border-bottom:2px solid ${pal.light};">
+          <div style="font-size:10px;font-weight:800;letter-spacing:0.2em;color:${pal.mid};">STAGE CLEAR</div>
+          <div style="font-size:17px;font-weight:900;letter-spacing:0.12em;margin-top:3px;">CHOOSE UPGRADE</div>
         </div>
         ${cards}
       `;
     } else if (this.screen === 'gameover' || this.screen === 'victory') {
       const isWin = this.screen === 'victory';
       const areaName = AREA_NAMES[state.area] ?? 'WELL';
-      const heading = isWin ? 'WELL CONQUERED!' : 'GAME OVER';
+      const heading = isWin ? 'CONGRATULATIONS!' : 'GAME OVER';
       const sub = isWin
         ? state.hardMode
-          ? 'HARD MODE VICTORY'
-          : 'ABYSSAL LEVIATHAN DEFEATED'
-        : `FALLEN IN ${state.area}-${state.level} ${areaName}`;
+          ? 'HARD MODE CLEARED!'
+          : 'ABYSSAL LEVIATHAN DEFEATED!'
+        : `FALLEN AT ${state.area}-${state.level} ${areaName}`;
 
       html = `
-        <div style="text-align:center;margin-bottom:12px;border-bottom:2px solid ${light};padding-bottom:8px;">
-          <div style="font-size:20px;font-weight:900;letter-spacing:0.1em;color:${isWin ? special : mid};">${heading}</div>
-          <div style="font-size:11px;margin-top:3px;opacity:0.85;">${escapeHtml(sub)}</div>
+        <div style="text-align:center;padding-bottom:10px;margin-bottom:12px;border-bottom:2px solid ${pal.light};">
+          <div style="font-size:20px;font-weight:900;letter-spacing:0.14em;color:${isWin ? pal.light : pal.mid};">${heading}</div>
+          <div style="font-size:11px;font-weight:800;margin-top:5px;">${escapeHtml(sub)}</div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-bottom:14px;padding:10px;border:1px solid ${light};border-radius:4px;">
-          <div>DEPTH: <b>${state.runStats.maxDepthMeters}M</b></div>
-          <div>TIME: <b>${formatTime(state.runStats.elapsedTicks)}</b></div>
-          <div>GEMS: <b>◆ ${state.runGems}</b></div>
-          <div>KILLS: <b>${state.runStats.kills}</b></div>
-          <div>MAX COMBO: <b>${state.maxCombo}X</b></div>
-          <div>STOMPS: <b>${state.runStats.stomps}</b></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:11px;font-weight:800;margin-bottom:14px;padding:10px;border:2px solid ${pal.light};">
+          <div>DEPTH: ${state.runStats.maxDepthMeters}M</div>
+          <div>TIME: ${formatTime(state.runStats.elapsedTicks)}</div>
+          <div>GEMS: ${state.runGems}</div>
+          <div>KILLS: ${state.runStats.kills}</div>
+          <div>MAX COMBO: ${state.maxCombo}X</div>
+          <div>STOMPS: ${state.runStats.stomps}</div>
         </div>
-        <button type="button" data-idx="0" style="${btnStyle(this.cursor === 0)}"><span>▶ ${isWin ? 'PLAY AGAIN' : 'RETRY'}</span><span>R</span></button>
-        <button type="button" data-idx="1" style="${btnStyle(this.cursor === 1)}"><span>TITLE SCREEN</span><span>ESC</span></button>
+        <button class="kw-px-btn" type="button" data-idx="0" style="${btnStyle(this.cursor === 0, false, true)}"><span>► ${isWin ? 'PLAY AGAIN' : 'RETRY'}</span><span>R</span></button>
+        <button class="kw-px-btn" type="button" data-idx="1" style="${btnStyle(this.cursor === 1)}"><span>TITLE SCREEN</span><span>ESC</span></button>
       `;
     }
 
@@ -795,15 +826,14 @@ export class MenuSystem {
   }
 
   private wirePanelClicks(state: SimState, save: SaveData): void {
-    // Standard indexed buttons (Title, Style Select, Trophies, Options, Pause, Game Over, Victory)
     const buttons = this.panel.querySelectorAll<HTMLButtonElement>('button[data-idx]');
     buttons.forEach((btn) => {
       const idx = Number(btn.dataset.idx);
-      btn.addEventListener('mouseenter', () => {
+      btn.addEventListener('pointerenter', () => {
         if (this.cursor !== idx) {
           this.cursor = idx;
           this.lastRenderKey = '';
-          this.renderScreen(state, save);
+          this.sync(state, save);
         }
       });
       btn.addEventListener('click', (e) => {
@@ -811,13 +841,11 @@ export class MenuSystem {
         e.stopPropagation();
         this.cursor = idx;
         this.activateCurrentItem(state, save);
-        this.lastRenderKey = '';
       });
     });
 
-    // Palette grid buttons (click/tap immediately previews & selects)
-    const palButtons = this.panel.querySelectorAll<HTMLButtonElement>('button[data-pal]');
-    palButtons.forEach((btn) => {
+    const palBtns = this.panel.querySelectorAll<HTMLButtonElement>('button[data-pal]');
+    palBtns.forEach((btn) => {
       const idx = Number(btn.dataset.pal);
       btn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -825,7 +853,7 @@ export class MenuSystem {
         this.cursor = idx;
         this.callbacks.onSelectPalette(idx);
         this.lastRenderKey = '';
-        this.renderScreen(state, save);
+        this.sync(state, save);
       });
     });
 
@@ -835,25 +863,22 @@ export class MenuSystem {
         e.preventDefault();
         e.stopPropagation();
         this.setScreen('title');
-        this.renderScreen(state, save);
       });
     }
 
-    // Upgrade cards (click/tap immediately picks the upgrade)
-    const ugButtons = this.panel.querySelectorAll<HTMLButtonElement>('button[data-upgrade]');
-    ugButtons.forEach((btn) => {
+    const ugBtns = this.panel.querySelectorAll<HTMLButtonElement>('button[data-upgrade]');
+    ugBtns.forEach((btn) => {
       const idx = Number(btn.dataset.upgrade);
-      btn.addEventListener('mouseenter', () => {
+      btn.addEventListener('pointerenter', () => {
         if (this.cursor !== idx) {
           this.cursor = idx;
           this.lastRenderKey = '';
-          this.renderScreen(state, save);
+          this.sync(state, save);
         }
       });
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        this.cursor = idx;
         this.callbacks.onPickUpgrade(idx);
       });
     });

@@ -5,15 +5,23 @@ import {
   type RenderSettings,
   type SimState,
 } from '../contracts/index.ts';
-import { getPalette, rgbToHex } from '../data/palettes.ts';
+import { getPalette } from '../data/palettes.ts';
 import { getStyleDef } from '../data/styles.ts';
 import { getUpgradeDef } from '../data/upgrades.ts';
 import { getWeaponDef } from '../data/weapons.ts';
+import {
+  getPaletteHex,
+  renderPixelGemSvg,
+  renderPixelHeartSvg,
+  renderPixelLogoSvg,
+  renderPixelUpgradeIconSvg,
+} from './PixelUiIcons.ts';
 
 // ============================================================================
-// Krunked Well — Responsive Multi-Form-Factor Viewport & Side-Panel Layout
-// Supports Mobile Portrait (aspect < 0.85), Desktop Landscape, and Tesla
-// Landscape (1280x720+), Integer/Fit scaling, and Tate rotation (0/90/270).
+// Krunked Well — Authentic 4-Color Palette-Synced Retro Arcade Viewport Layout
+// Supports Mobile Portrait, Desktop Landscape, and Tesla Landscape (1280x720+),
+// Integer/Fit pixel scaling, Tate rotation (0/90/270), and razor-sharp pixel
+// side panels strictly synced to all 38 unlockable palettes!
 // ============================================================================
 
 export type ViewportLayoutMode = 'portrait' | 'landscape' | 'tesla';
@@ -30,19 +38,24 @@ export class ViewportLayout {
   private readonly centerWell: HTMLDivElement;
   private readonly canvasFrame: HTMLDivElement;
   private readonly rightPanel: HTMLElement;
+  private readonly portraitFooterEl: HTMLDivElement;
   private readonly toastEl: HTMLDivElement;
 
   // Left Panel Live Slots
+  private readonly logoSlotEl: HTMLElement;
   private readonly hpValEl: HTMLElement;
   private readonly stageValEl: HTMLElement;
+  private readonly biomePipsEl: HTMLElement;
   private readonly weaponValEl: HTMLElement;
   private readonly chargeFillEl: HTMLElement;
   private readonly chargeTextEl: HTMLElement;
   private readonly comboValEl: HTMLElement;
+  private readonly paletteBadgeEl: HTMLElement;
 
   // Right Panel Live Slots
   private readonly gemsValEl: HTMLElement;
   private readonly gemHighEl: HTMLElement;
+  private readonly gemStreakFillEl: HTMLElement;
   private readonly styleValEl: HTMLElement;
   private readonly upgradesListEl: HTMLElement;
   private readonly controlsHintEl: HTMLElement;
@@ -67,66 +80,81 @@ export class ViewportLayout {
       justifyContent: 'center',
       overflow: 'hidden',
       boxSizing: 'border-box',
-      fontFamily: "'Courier New', Courier, monospace",
+      fontFamily: 'var(--kw-font-pixel)',
     });
 
-    // ---- Left Side Panel (Landscape / Tesla) ----
-    this.leftPanel = document.createElement('aside');
-    this.leftPanel.id = 'krunked-panel-left';
-    Object.assign(this.leftPanel.style, {
+    const panelBaseStyle: Partial<CSSStyleDeclaration> = {
+      position: 'relative',
       display: 'flex',
       flexDirection: 'column',
-      justifyContent: 'space-between',
-      width: '220px',
+      justifyContent: 'flex-start',
+      width: '236px',
       maxWidth: '24vw',
-      padding: '14px 16px',
-      gap: '12px',
-      border: '2px solid rgba(250,250,250,0.22)',
-      borderRadius: '6px',
+      padding: '14px',
+      gap: '10px',
+      border: '2px solid #ffffff',
+      borderRadius: '0px',
       boxSizing: 'border-box',
       flexShrink: '0',
-    });
+      overflow: 'hidden',
+    };
+
+    // ---- Left Retro Arcade Panel ----
+    this.leftPanel = document.createElement('aside');
+    this.leftPanel.id = 'krunked-panel-left';
+    Object.assign(this.leftPanel.style, panelBaseStyle);
 
     this.leftPanel.innerHTML = `
-      <div style="border-bottom:2px solid currentColor;padding-bottom:8px;">
-        <div style="font-size:16px;font-weight:700;letter-spacing:0.1em;">KRUNKED WELL</div>
-        <div style="font-size:10px;opacity:0.72;letter-spacing:0.08em;margin-top:2px;">GUNBOOT DESCENT</div>
+      <div style="text-align:center;padding-bottom:10px;border-bottom:2px solid currentColor;">
+        <div data-slot="logo"></div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        <div>
-          <div style="font-size:10px;opacity:0.65;">HEALTH</div>
-          <div data-slot="hp" style="font-size:15px;font-weight:700;margin-top:2px;">♥♥♥♥</div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;flex:1;">
+        <div class="kw-px-cell">
+          <div class="kw-px-label">HP</div>
+          <div data-slot="hp" style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-height:18px;margin-top:4px;"></div>
         </div>
-        <div>
-          <div style="font-size:10px;opacity:0.65;">DEPTH / BIOME</div>
-          <div data-slot="stage" style="font-size:13px;font-weight:700;margin-top:2px;">1-1 CAVERN</div>
+
+        <div class="kw-px-cell">
+          <div class="kw-px-label">DEPTH</div>
+          <div data-slot="stage" style="font-size:12px;font-weight:800;letter-spacing:0.06em;margin-top:3px;">1-1 CAVERN</div>
+          <div data-slot="biome-pips" style="display:flex;gap:4px;margin-top:6px;"></div>
         </div>
-        <div>
-          <div style="font-size:10px;opacity:0.65;">GUNBOOTS</div>
-          <div data-slot="weapon" style="font-size:13px;font-weight:700;margin-top:2px;">MACHINEGUN</div>
-          <div style="margin-top:4px;height:10px;border:1px solid currentColor;padding:1px;">
-            <div data-slot="charge-fill" style="height:100%;width:100%;background:currentColor;"></div>
+
+        <div class="kw-px-cell">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span class="kw-px-label">GUNBOOTS</span>
+            <span data-slot="charge-text" style="font-size:11px;font-weight:800;">8/8</span>
           </div>
-          <div data-slot="charge-text" style="font-size:11px;margin-top:2px;text-align:right;">8 / 8</div>
+          <div data-slot="weapon" style="font-size:12px;font-weight:800;letter-spacing:0.06em;margin-top:3px;">MACHINEGUN</div>
+          <div style="margin-top:6px;height:10px;border:2px solid currentColor;padding:1px;box-sizing:border-box;">
+            <div data-slot="charge-fill" style="height:100%;width:100%;"></div>
+          </div>
         </div>
-        <div>
-          <div style="font-size:10px;opacity:0.65;">COMBO</div>
-          <div data-slot="combo" style="font-size:14px;font-weight:700;margin-top:2px;">--</div>
+
+        <div class="kw-px-cell">
+          <div class="kw-px-label">COMBO</div>
+          <div data-slot="combo" style="font-size:15px;font-weight:900;margin-top:2px;">--</div>
+          <div style="font-size:9px;opacity:0.7;margin-top:3px;letter-spacing:0.05em;">8:GEMS 15:CHG 25:HP</div>
         </div>
       </div>
-      <div style="font-size:10px;opacity:0.55;border-top:1px solid rgba(255,255,255,0.2);padding-top:6px;">
-        60 HZ DETERMINISTIC
+
+      <div data-slot="palette-badge" style="margin-top:auto;text-align:center;font-size:10px;font-weight:800;letter-spacing:0.08em;padding-top:8px;border-top:2px solid currentColor;opacity:0.85;">
+        PAL #0 KRUNKED
       </div>
     `;
 
+    this.logoSlotEl = this.leftPanel.querySelector('[data-slot="logo"]') as HTMLElement;
     this.hpValEl = this.leftPanel.querySelector('[data-slot="hp"]') as HTMLElement;
     this.stageValEl = this.leftPanel.querySelector('[data-slot="stage"]') as HTMLElement;
+    this.biomePipsEl = this.leftPanel.querySelector('[data-slot="biome-pips"]') as HTMLElement;
     this.weaponValEl = this.leftPanel.querySelector('[data-slot="weapon"]') as HTMLElement;
     this.chargeFillEl = this.leftPanel.querySelector('[data-slot="charge-fill"]') as HTMLElement;
     this.chargeTextEl = this.leftPanel.querySelector('[data-slot="charge-text"]') as HTMLElement;
     this.comboValEl = this.leftPanel.querySelector('[data-slot="combo"]') as HTMLElement;
+    this.paletteBadgeEl = this.leftPanel.querySelector('[data-slot="palette-badge"]') as HTMLElement;
 
-    // ---- Center Well Frame ----
+    // ---- Center Native Pixel Well Bezel ----
     this.centerWell = document.createElement('div');
     this.centerWell.id = 'krunked-center-well';
     Object.assign(this.centerWell.style, {
@@ -145,8 +173,8 @@ export class ViewportLayout {
       alignItems: 'center',
       justifyContent: 'center',
       boxSizing: 'content-box',
-      border: '2px solid #fafafa',
-      boxShadow: '0 0 28px rgba(0, 0, 0, 0.7)',
+      border: '3px solid #ffffff',
+      borderRadius: '0px',
       overflow: 'hidden',
     });
 
@@ -159,52 +187,49 @@ export class ViewportLayout {
     this.canvasFrame.appendChild(this.canvas);
     this.centerWell.appendChild(this.canvasFrame);
 
-    // ---- Right Side Panel (Landscape / Tesla) ----
+    // ---- Right Retro Arcade Panel ----
     this.rightPanel = document.createElement('aside');
     this.rightPanel.id = 'krunked-panel-right';
-    Object.assign(this.rightPanel.style, {
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between',
-      width: '220px',
-      maxWidth: '24vw',
-      padding: '14px 16px',
-      gap: '12px',
-      border: '2px solid rgba(250,250,250,0.22)',
-      borderRadius: '6px',
-      boxSizing: 'border-box',
-      flexShrink: '0',
-    });
+    Object.assign(this.rightPanel.style, panelBaseStyle);
 
     this.rightPanel.innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        <div>
-          <div style="font-size:10px;opacity:0.65;">GEMS</div>
-          <div data-slot="gems" style="font-size:16px;font-weight:700;margin-top:2px;">0</div>
-          <div data-slot="gemhigh" style="font-size:11px;font-weight:700;margin-top:2px;min-height:14px;"></div>
+      <div style="display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;">
+        <div class="kw-px-cell">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span class="kw-px-label">GEMS</span>
+            <span data-slot="gemhigh" style="font-size:10px;font-weight:900;"></span>
+          </div>
+          <div data-slot="gems" style="display:flex;align-items:center;gap:6px;font-size:18px;font-weight:900;margin-top:4px;">0</div>
+          <div style="margin-top:6px;height:8px;border:2px solid currentColor;padding:1px;box-sizing:border-box;">
+            <div data-slot="gem-streak-fill" style="height:100%;width:0%;"></div>
+          </div>
         </div>
-        <div>
-          <div style="font-size:10px;opacity:0.65;">STYLE</div>
-          <div data-slot="style" style="font-size:12px;font-weight:700;margin-top:2px;">STANDARD</div>
+
+        <div class="kw-px-cell">
+          <div class="kw-px-label">STYLE</div>
+          <div data-slot="style" style="font-size:12px;font-weight:800;margin-top:3px;letter-spacing:0.06em;">STANDARD</div>
         </div>
-        <div>
-          <div style="font-size:10px;opacity:0.65;">UPGRADES</div>
-          <div data-slot="upgrades" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;font-size:10px;max-height:132px;overflow-y:auto;"></div>
+
+        <div class="kw-px-cell" style="flex:1;display:flex;flex-direction:column;min-height:0;">
+          <div class="kw-px-label" style="margin-bottom:6px;">UPGRADES</div>
+          <div data-slot="upgrades" style="display:flex;flex-direction:column;gap:5px;overflow-y:auto;flex:1;"></div>
         </div>
       </div>
-      <div style="border-top:1px solid rgba(255,255,255,0.2);padding-top:8px;">
-        <div style="font-size:10px;opacity:0.65;margin-bottom:4px;">CONTROLS</div>
-        <div data-slot="controls" style="font-size:10px;line-height:1.5;opacity:0.88;"></div>
+
+      <div style="border-top:2px solid currentColor;padding-top:8px;">
+        <div class="kw-px-label" style="margin-bottom:5px;">CONTROLS</div>
+        <div data-slot="controls" style="font-size:10px;line-height:1.65;"></div>
       </div>
     `;
 
     this.gemsValEl = this.rightPanel.querySelector('[data-slot="gems"]') as HTMLElement;
     this.gemHighEl = this.rightPanel.querySelector('[data-slot="gemhigh"]') as HTMLElement;
+    this.gemStreakFillEl = this.rightPanel.querySelector('[data-slot="gem-streak-fill"]') as HTMLElement;
     this.styleValEl = this.rightPanel.querySelector('[data-slot="style"]') as HTMLElement;
     this.upgradesListEl = this.rightPanel.querySelector('[data-slot="upgrades"]') as HTMLElement;
     this.controlsHintEl = this.rightPanel.querySelector('[data-slot="controls"]') as HTMLElement;
 
-    // ---- Top-Center Non-Blocking Toast Notification Pill ----
+    // ---- Top-Center Retro Arcade Toast ----
     this.toastEl = document.createElement('div');
     this.toastEl.id = 'krunked-toast';
     Object.assign(this.toastEl.style, {
@@ -214,22 +239,42 @@ export class ViewportLayout {
       transform: 'translateX(-50%)',
       zIndex: '70',
       padding: '6px 14px',
-      border: '2px solid #fafafa',
-      borderRadius: '4px',
-      background: '#050505',
-      color: '#fafafa',
+      border: '2px solid #ffffff',
+      borderRadius: '0px',
+      background: '#000000',
+      color: '#ffffff',
+      fontFamily: 'var(--kw-font-pixel)',
       fontSize: '12px',
-      fontWeight: '700',
-      letterSpacing: '0.06em',
+      fontWeight: '800',
+      letterSpacing: '0.1em',
       pointerEvents: 'none',
       opacity: '0',
-      transition: 'opacity 160ms ease',
+      transition: 'opacity 140ms steps(4)',
       whiteSpace: 'nowrap',
+    });
+
+    // ---- Mobile Portrait Lower Console Bezel ----
+    this.portraitFooterEl = document.createElement('div');
+    this.portraitFooterEl.id = 'krunked-portrait-crest';
+    Object.assign(this.portraitFooterEl.style, {
+      position: 'fixed',
+      left: '0',
+      right: '0',
+      bottom: '0',
+      height: '108px',
+      display: 'none',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '6px',
+      pointerEvents: 'none',
+      zIndex: '10',
     });
 
     this.stageEl.appendChild(this.leftPanel);
     this.stageEl.appendChild(this.centerWell);
     this.stageEl.appendChild(this.rightPanel);
+    this.stageEl.appendChild(this.portraitFooterEl);
     this.stageEl.appendChild(this.toastEl);
     this.rootEl.appendChild(this.stageEl);
 
@@ -241,32 +286,47 @@ export class ViewportLayout {
   }
 
   private applyPaletteTheme(): void {
-    const pal = getPalette(this.paletteIndex);
-    const light = rgbToHex(pal.light);
-    const mid = rgbToHex(pal.mid);
-    const dark = rgbToHex(pal.dark);
-    const special = rgbToHex(pal.special);
+    const pal = getPaletteHex(this.paletteIndex);
+    const palDef = getPalette(this.paletteIndex);
 
-    document.body.style.background = dark;
-    document.body.style.color = light;
-    this.stageEl.style.background = dark;
-    this.stageEl.style.color = light;
+    document.body.style.background = pal.dark;
+    document.body.style.color = pal.light;
 
-    this.canvasFrame.style.borderColor = light;
-    this.leftPanel.style.borderColor = light;
-    this.leftPanel.style.background = dark;
-    this.rightPanel.style.borderColor = light;
-    this.rightPanel.style.background = dark;
-    this.toastEl.style.background = dark;
-    this.toastEl.style.borderColor = mid;
-    this.toastEl.style.color = light;
-    this.gemHighEl.style.color = mid;
-    this.chargeFillEl.style.background = special;
+    this.stageEl.style.background = pal.dark;
+    this.stageEl.style.color = pal.light;
+    this.stageEl.style.setProperty('--kw-light', pal.light);
+    this.stageEl.style.setProperty('--kw-mid', pal.mid);
+    this.stageEl.style.setProperty('--kw-dark', pal.dark);
+    this.stageEl.style.setProperty('--kw-special', pal.special);
+
+    this.leftPanel.style.background = pal.dark;
+    this.leftPanel.style.borderColor = pal.light;
+    this.leftPanel.style.color = pal.light;
+
+    this.rightPanel.style.background = pal.dark;
+    this.rightPanel.style.borderColor = pal.light;
+    this.rightPanel.style.color = pal.light;
+
+    this.canvasFrame.style.borderColor = pal.light;
+    this.canvasFrame.style.boxShadow = `0 0 0 3px ${pal.dark}, 0 0 0 5px ${pal.mid}`;
+
+    this.toastEl.style.background = pal.dark;
+    this.toastEl.style.borderColor = pal.light;
+    this.toastEl.style.color = pal.light;
+    this.gemHighEl.style.color = pal.mid;
+
+    this.logoSlotEl.innerHTML = renderPixelLogoSvg(pal, 174);
+    this.paletteBadgeEl.textContent = `PAL #${palDef.id} ${palDef.name}`;
+    this.portraitFooterEl.innerHTML = `
+      ${renderPixelLogoSvg(pal, 148)}
+      <div style="font-size:10px;font-weight:800;letter-spacing:0.14em;color:${pal.light};opacity:0.75;">TAP FOR TOUCH CONTROLS</div>
+    `;
   }
 
   updateSettings(settings: RenderSettings, paletteIndex: number): void {
     this.settings = settings;
     this.paletteIndex = paletteIndex;
+    this.lastHudKey = '';
     this.applyPaletteTheme();
     this.resize();
   }
@@ -287,18 +347,18 @@ export class ViewportLayout {
     const showSidePanels = this.layoutMode !== 'portrait' && vw >= 720;
     this.leftPanel.style.display = showSidePanels ? 'flex' : 'none';
     this.rightPanel.style.display = showSidePanels ? 'flex' : 'none';
+    this.portraitFooterEl.style.display = this.layoutMode === 'portrait' ? 'flex' : 'none';
 
-    // Clean thumb margins on left/right bezels in landscape/Tesla, and reserved bottom touch zone in portrait
-    const bezelPadX = this.layoutMode === 'tesla' ? 42 : showSidePanels ? 18 : 6;
-    const bezelPadTop = this.layoutMode === 'portrait' ? 10 : 16;
-    const bezelPadBottom = this.layoutMode === 'portrait' ? 116 : 16;
-    const panelGap = this.layoutMode === 'tesla' ? 28 : 16;
+    const bezelPadX = this.layoutMode === 'tesla' ? 36 : showSidePanels ? 16 : 6;
+    const bezelPadTop = this.layoutMode === 'portrait' ? 8 : 16;
+    const bezelPadBottom = this.layoutMode === 'portrait' ? 114 : 16;
+    const panelGap = this.layoutMode === 'tesla' ? 24 : 14;
 
     this.stageEl.style.alignItems = this.layoutMode === 'portrait' ? 'flex-start' : 'center';
     this.stageEl.style.padding = `${bezelPadTop}px ${bezelPadX}px ${bezelPadBottom}px ${bezelPadX}px`;
     this.stageEl.style.gap = `${panelGap}px`;
 
-    const sidePanelW = showSidePanels ? Math.min(230, Math.max(168, Math.floor(vw * 0.2))) : 0;
+    const sidePanelW = showSidePanels ? Math.min(248, Math.max(186, Math.floor(vw * 0.2))) : 0;
     if (showSidePanels) {
       this.leftPanel.style.width = `${sidePanelW}px`;
       this.rightPanel.style.width = `${sidePanelW}px`;
@@ -306,9 +366,9 @@ export class ViewportLayout {
 
     const availW = Math.max(
       160,
-      vw - bezelPadX * 2 - (showSidePanels ? sidePanelW * 2 + panelGap * 2 : 0) - 8,
+      vw - bezelPadX * 2 - (showSidePanels ? sidePanelW * 2 + panelGap * 2 : 0) - 12,
     );
-    const availH = Math.max(160, vh - bezelPadTop - bezelPadBottom - 8);
+    const availH = Math.max(160, vh - bezelPadTop - bezelPadBottom - 12);
 
     const rotated = this.settings.tateMode === 90 || this.settings.tateMode === 270;
     const logicalW = WELL_CONSTANTS.VIEW_W;
@@ -335,7 +395,7 @@ export class ViewportLayout {
       this.settings.tateMode === 0 ? 'none' : `rotate(${this.settings.tateMode}deg)`;
 
     if (showSidePanels) {
-      const panelH = Math.min(availH, Math.max(380, frameH));
+      const panelH = Math.min(availH, Math.max(420, frameH));
       this.leftPanel.style.height = `${panelH}px`;
       this.rightPanel.style.height = `${panelH}px`;
     }
@@ -344,9 +404,17 @@ export class ViewportLayout {
   updateHud(state: SimState, inputSource: InputSource, paletteIndex: number): void {
     if (paletteIndex !== this.paletteIndex) {
       this.paletteIndex = paletteIndex;
+      this.lastHudKey = '';
       this.applyPaletteTheme();
     }
-    if (this.layoutMode === 'portrait') return;
+
+    const pal = getPaletteHex(this.paletteIndex);
+    this.canvasFrame.style.borderColor = state.gemHigh ? pal.mid : pal.light;
+
+    if (this.layoutMode === 'portrait') {
+      this.portraitFooterEl.style.opacity = inputSource === 'touch' ? '0' : '1';
+      return;
+    }
 
     const p = state.player;
     const hudKey = [
@@ -367,81 +435,119 @@ export class ViewportLayout {
       state.hardMode ? 1 : 0,
       state.upgrades.length,
       inputSource,
+      this.paletteIndex,
     ].join('|');
 
     if (hudKey === this.lastHudKey) return;
     this.lastHudKey = hudKey;
 
-    const pal = getPalette(this.paletteIndex);
-    const midHex = rgbToHex(pal.mid);
-    const lightHex = rgbToHex(pal.light);
+    // 1. Crisp Pixel Hearts
+    if (p.hpMax <= 8) {
+      let heartsHtml = '';
+      for (let i = 0; i < p.hpMax; i++) {
+        heartsHtml += renderPixelHeartSvg(i < p.hp, pal, 16);
+      }
+      if (p.heartPieces > 0) {
+        heartsHtml += `<span style="font-size:10px;margin-left:4px;color:${pal.mid};">+${p.heartPieces}/4</span>`;
+      }
+      this.hpValEl.innerHTML = heartsHtml;
+    } else {
+      this.hpValEl.innerHTML = `${renderPixelHeartSvg(p.hp > 0, pal, 16)} <span style="font-size:13px;font-weight:900;">${p.hp}/${p.hpMax}</span>`;
+    }
 
-    // Health hearts
-    const filled = '♥'.repeat(Math.max(0, Math.min(12, p.hp)));
-    const empty = '♡'.repeat(Math.max(0, Math.min(12, p.hpMax - p.hp)));
-    const pieceStr = p.heartPieces > 0 ? ` [${p.heartPieces}/4]` : '';
-    this.hpValEl.textContent =
-      p.hpMax <= 8 ? `${filled}${empty}${pieceStr}` : `♥ ${p.hp}/${p.hpMax}${pieceStr}`;
-    this.hpValEl.style.color = p.hp <= 1 ? midHex : lightHex;
-
-    // Stage + depth
+    // 2. Stage & 5-Area Pixel Depth Pips
     const areaName = AREA_NAMES[state.area] ?? 'WELL';
     const stageStr = state.area === 0 ? 'SURFACE' : `${state.area}-${state.level} ${areaName}`;
-    this.stageValEl.textContent = `${stageStr} (${state.runStats.maxDepthMeters}M)`;
+    this.stageValEl.textContent = `${stageStr}  ${state.runStats.maxDepthMeters}M`;
+    let pipsHtml = '';
+    for (let a = 1; a <= 5; a++) {
+      const active = state.area === a;
+      const cleared = state.area > a;
+      const fill = active ? pal.mid : cleared ? pal.light : 'transparent';
+      pipsHtml += `<span style="flex:1;height:6px;border:1px solid ${pal.light};background:${fill};"></span>`;
+    }
+    this.biomePipsEl.innerHTML = pipsHtml;
 
-    // Weapon + charge
+    // 3. Weapon & Gunboot Charge Bar
     const wDef = getWeaponDef(p.weaponId);
-    this.weaponValEl.textContent = state.gemHigh ? `${wDef.name} +` : wDef.name;
+    this.weaponValEl.textContent = state.gemHigh ? `${wDef.name}!` : wDef.name;
+    this.weaponValEl.style.color = state.gemHigh ? pal.mid : pal.light;
     const pct = Math.max(0, Math.min(100, Math.round((p.ammo / Math.max(1, p.ammoMax)) * 100)));
     this.chargeFillEl.style.width = `${pct}%`;
-    this.chargeFillEl.style.background = state.gemHigh ? midHex : lightHex;
-    this.chargeTextEl.textContent = `${p.ammo} / ${p.ammoMax}`;
+    this.chargeFillEl.style.background = p.jetpackActive
+      ? pal.special
+      : state.gemHigh
+        ? pal.mid
+        : pal.light;
+    this.chargeTextEl.textContent = `${p.ammo}/${p.ammoMax}`;
 
-    // Combo
-    this.comboValEl.textContent = state.combo >= 2 ? `${state.combo}X CHAIN` : '--';
-    this.comboValEl.style.color = state.combo >= WELL_CONSTANTS.COMBO_TIER_1 ? midHex : lightHex;
+    // 4. Combo
+    this.comboValEl.textContent = state.combo >= 2 ? `${state.combo}X` : '--';
+    this.comboValEl.style.color =
+      state.combo >= WELL_CONSTANTS.COMBO_TIER_1 ? pal.mid : pal.light;
 
-    // Gems & Gem High
-    this.gemsValEl.textContent = `◆ ${state.gems}`;
+    // 5. Gems & Gem High Bar
+    this.gemsValEl.innerHTML = `${renderPixelGemSvg(pal, 16)}<span>${state.gems}</span>`;
+    this.gemsValEl.style.color = state.gemHigh ? pal.mid : pal.light;
     this.gemHighEl.textContent = state.gemHigh
-      ? '★ GEM HIGH ACTIVE!'
+      ? 'GEM HIGH!'
       : state.gemStreak > 0
-        ? `STREAK: ${state.gemStreak}/100`
+        ? `${state.gemStreak}/100`
         : '';
+    const streakPct = state.gemHigh
+      ? Math.max(0, Math.min(100, Math.round((state.gemStreakTimer / WELL_CONSTANTS.GEM_STREAK_TIMER) * 100)))
+      : Math.max(0, Math.min(100, Math.round((state.gemStreak / WELL_CONSTANTS.GEM_HIGH_THRESHOLD) * 100)));
+    this.gemStreakFillEl.style.width = `${streakPct}%`;
+    this.gemStreakFillEl.style.background = state.gemHigh ? pal.mid : pal.light;
 
-    // Style & Hard Mode
+    // 6. Style
     const style = getStyleDef(state.styleId);
     this.styleValEl.textContent = state.hardMode ? `${style.name} [HARD]` : style.name;
 
-    // Upgrades
+    // 7. Equipped Upgrades with Razor-Sharp Palette-Synced Pixel Icons!
     if (state.upgrades.length === 0) {
-      this.upgradesListEl.innerHTML = '<span style="opacity:0.5;">NONE YET</span>';
+      this.upgradesListEl.innerHTML =
+        `<div style="font-size:10px;opacity:0.55;">NONE YET</div>`;
     } else {
       const chips: string[] = [];
       for (let i = 0; i < state.upgrades.length; i++) {
         const ug = getUpgradeDef(state.upgrades[i]!);
         chips.push(
-          `<span style="border:1px solid currentColor;padding:1px 4px;border-radius:2px;">${ug.name}</span>`,
+          `<div style="display:flex;align-items:center;gap:8px;padding:3px 5px;border:1px solid ${pal.light};">
+            ${renderPixelUpgradeIconSvg(ug.id, pal, 24)}
+            <span style="font-size:10px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ug.name}</span>
+          </div>`,
         );
       }
       this.upgradesListEl.innerHTML = chips.join('');
     }
 
-    // Dynamic Input Glyph Hints
+    // 8. Sharp Arcade Keycap Prompts
+    const keycap = (txt: string): string =>
+      `<span style="display:inline-block;padding:0 4px;border:1px solid ${pal.light};font-size:9px;font-weight:800;">${txt}</span>`;
     if (inputSource === 'gamepad') {
-      this.controlsHintEl.innerHTML =
-        'MOVE: L-STICK / D-PAD<br/>JUMP & FIRE: A / B / X / RT<br/>PAUSE: START &nbsp; RETRY: Y';
+      this.controlsHintEl.innerHTML = `
+        <div>MOVE ${keycap('STICK')} ${keycap('DPAD')}</div>
+        <div style="margin-top:3px;">FIRE ${keycap('A')} ${keycap('B')} ${keycap('RT')}</div>
+        <div style="margin-top:3px;">PAUSE ${keycap('START')}</div>
+      `;
     } else if (inputSource === 'touch') {
-      this.controlsHintEl.innerHTML =
-        'MOVE: SLIDE LEFT PAD<br/>JUMP & FIRE: RIGHT BTN<br/>PAUSE: TOP-RIGHT II';
+      this.controlsHintEl.innerHTML = `
+        <div>MOVE ${keycap('L-PAD')}</div>
+        <div style="margin-top:3px;">FIRE ${keycap('BTN')}</div>
+        <div style="margin-top:3px;">PAUSE ${keycap('II')}</div>
+      `;
     } else {
-      this.controlsHintEl.innerHTML =
-        'MOVE: A/D or ◀/▶<br/>JUMP & FIRE: SPACE / Z<br/>PAUSE: ESC / P &nbsp; RETRY: R';
+      this.controlsHintEl.innerHTML = `
+        <div>MOVE ${keycap('A')}${keycap('D')} ${keycap('◄')}${keycap('►')}</div>
+        <div style="margin-top:3px;">FIRE ${keycap('SPACE')} ${keycap('Z')}</div>
+        <div style="margin-top:3px;">PAUSE ${keycap('ESC')} RETRY ${keycap('R')}</div>
+      `;
     }
   }
 
   showToast(message: string, durationMs = 2600): void {
-    this.toastEl.textContent = message;
+    this.toastEl.textContent = `[ ${message} ]`;
     this.toastEl.style.opacity = '1';
     if (this.toastTimeout !== null) {
       window.clearTimeout(this.toastTimeout);
